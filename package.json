@@ -1,0 +1,27 @@
+{
+  "name": "@rowi/rowi-dropdown",
+  "version": "0.1.0",
+  "description": "A dropdown web component",
+  "main": "rowi-dropdown.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rowi2/rowi-dropdown.git"
+  },
+  "keywords": [
+    "web-component"
+  ],
+  "author": "Andres Felipe Sierra Parra",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/rowi2/rowi-dropdown/issues"
+  },
+  "homepage": "https://github.com/rowi2/rowi-dropdown#readme",
+  "dependencies": {
+    "@rowi/rowi-element": "^0.1.0",
+    "@rowi/rowi-overlay": "^0.1.0"
+  }
+}
