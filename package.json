@@ -1,11 +1,11 @@
 {
   "name": "@rowi/rowi-dropdown",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "A dropdown web component",
-  "main": "rowi-dropdown.js",
-  "type": "module",
+  "main": "src/rowi-dropdown.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "webpack"
   },
   "repository": {
     "type": "git",
@@ -23,5 +23,9 @@
   "dependencies": {
     "@rowi/rowi-element": "^0.1.0",
     "@rowi/rowi-overlay": "^0.1.0"
+  },
+  "devDependencies": {
+    "webpack": "^5.58.1",
+    "webpack-cli": "^4.9.0"
   }
 }

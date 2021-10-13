@@ -1,6 +1,6 @@
 # rowi-overlay
 
-A overlay web component. Anything inside this component will be hidden by default, and when opened, its contents will be shown on top on anything in the document.
+A dropdown web component.
 
 ## Properties
 
@@ -32,9 +32,16 @@ A overlay web component. Anything inside this component will be hidden by defaul
     - Attribute: `data-transition`.
     - Event: `$transition`.
 
-- `noClosable`
+- `persistent`
     - type: `boolean`
     - default: `false`.
-    - Description:  Whether the overlay can be closed or not.
-    - Attribute: `data-no-closable`.
-    - Event: `$noClosable`.
+    - Description:  Whether the overlay can be closed (if false) or not.
+    - Attribute: `data-persistent`.
+    - Event: `$persistent`.
+
+- `intangible`
+    - type: `boolean`
+    - default: `false`.
+    - Description:  Whether the overlay can be clicked through (if true) or not.
+    - Attribute: `data-intangible`.
+    - Event: `$intangible`.
