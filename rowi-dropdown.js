@@ -9,11 +9,11 @@ function getBoxInfo(maxWidth, maxHeight, style) {
 }
 
 class RWDropdown extends RowiElement {
-
+  #connected
+  #windowResized
   constructor () {
     super()
-    this._connected = false
-    this.attachShadow({mode: 'open'})
+    this.#connected = false
 
     const defaultTransition = this.props.transitionTime.default
 
@@ -42,22 +42,22 @@ class RWDropdown extends RowiElement {
         height: 0;
       }`
 
-    this.createElement([this.shadowRoot,
+    this.$buildShadow([
       ['style', {props: {textContent: style}}],
       ['slot', {name: 'holder', attrs: {name: 'holder'}}],
       ['rw-overlay', {
         name: 'dropdown',
-        props: {
-          opacity: this.props.opacity.default,
-          color: this.props.overlayColor.default,
-          transition: this.props.transitionTime.default
-        },
-        on: {
-          $opened: ev => {
-            this._avoidUpdateOverlay = true
-            this.opened = ev.detail.newValue
-          }
-        }
+        // props: {
+        //   opacity: this.props.opacity.default,
+        //   color: this.props.overlayColor.default,
+        //   transition: this.props.transitionTime.default
+        // },
+        // on: {
+        //   $opened: ev => {
+        //     this._avoidUpdateOverlay = true
+        //     this.opened = ev.detail.newValue
+        //   }
+        // }
       },
         ['div', {name: 'box', class: 'dropdown'},
           ['div', {name: 'arrow', class: 'arrow'}],
@@ -66,11 +66,11 @@ class RWDropdown extends RowiElement {
       ]
     ])
 
-    this._windowResized = this._windowResized.bind(this)
+    this.#windowResized = this.#_windowResized.bind(this)
   }
 
-  connectedCallback () { this._connected = true }
-  disconnectedCallback () { this._connected = false }
+  connectedCallback () { this.#connected = true }
+  disconnectedCallback () { this.#connected = false }
 
   static get observedAttributes () { return [
     'data-opened',
@@ -102,19 +102,19 @@ class RWDropdown extends RowiElement {
         this._openedChanged()
       }},
       opacity: { type: 'number', default: 0, handler ({newValue}) {
-        this.__refs__.dropdown.opacity = newValue
+        this.$.dropdown.opacity = newValue
       }},
       overlayColor: { type: 'string', default: '0,0,0', handler ({newValue}) {
-        this.__refs__.dropdown.color = newValue
+        this.$.dropdown.color = newValue
       }},
       transitionTime: { type: 'number', default: 300, handler ({newValue}) {
-        this.__refs__.dropdown.transition = newValue
+        this.$.dropdown.transition = newValue
       }},
       persistent: { type: 'boolean', handler ({newValue}) {
-        this.__refs__.dropdown.persistent = newValue
+        this.$.dropdown.persistent = newValue
       }},
       intangible: { type: 'boolean', handler ({newValue}) {
-        this.__refs__.dropdown.intangible = newValue
+        this.$.dropdown.intangible = newValue
       }},
       dropdownStyle: { type: 'string', default: 'normal',
         validator (value) {
@@ -247,24 +247,24 @@ class RWDropdown extends RowiElement {
 
   _openedChanged () {
     if (this.opened) {
-      window.addEventListener('resize', this._windowResized)
+      window.addEventListener('resize', this.#windowResized)
       this._updateAll()
       if (!this._avoidUpdateOverlay) {
-        this.__refs__.dropdown.opened = true
+        this.$.dropdown.opened = true
         this._avoidUpdateOverlay = false
       }
-      setTimeout(() => this.__refs__.box.classList.add('opened'))
+      setTimeout(() => this.$.box.classList.add('opened'))
     } else {
-      window.removeEventListener('resize', this._windowResized)
+      window.removeEventListener('resize', this.#windowResized)
       if (!this._avoidUpdateOverlay) {
-        this.__refs__.dropdown.opened = false
+        this.$.dropdown.opened = false
         this._avoidUpdateOverlay = false
       }
-      setTimeout(() => this.__refs__.box.classList.remove('opened'))
+      setTimeout(() => this.$.box.classList.remove('opened'))
     }
   }
 
-  _windowResized () {
+  #_windowResized () {
     clearTimeout(this._windowResizedTimeoutID)
     this._windowResizedTimeoutID = setTimeout(() => this._updateAll(), 200)
   }
@@ -272,12 +272,12 @@ class RWDropdown extends RowiElement {
   _applyBoxStyle (style) {
     Object.entries(style).forEach(([prop, value]) => {
       if (this._numericProps.includes(prop)) value += 'px'
-      this.__refs__.box.style[prop] = value
+      this.$.box.style[prop] = value
     })
   }
 
   _updateAll () {
-    const holder = this.__refs__.holder
+    const holder = this.$.holder
     const holderRect = holder.getBoundingClientRect()
     this._findLargestBox(holderRect)
     this._applyBoxStyle(this._largestBoxStyle)
@@ -303,8 +303,8 @@ class RWDropdown extends RowiElement {
   _updateDropdown (rect) {
     if (this.dropdownStyle !== 'center') return
 
-    const box = this.__refs__.box
-    const dropdown = this.__refs__.dropdown
+    const box = this.$.box
+    const dropdown = this.$.dropdown
     const opened = dropdown.opened
 
     if (!opened) {
