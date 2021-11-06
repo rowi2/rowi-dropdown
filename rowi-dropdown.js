@@ -20,7 +20,7 @@ class RWDropdown extends RowiElement {
     const style = `
       .dropdown {
         background-color: var(--rw-dropdown-color, white);
-        border-radius: var(--rw-dropdown-radius, 4px);
+        border-radius: var(--rw-dropdown-radius, 2px);
         position: absolute;
         filter: var(--rw-dropdown-filter, drop-shadow(2px 2px 4px rgba(0, 0, 0, 0.35)));
         border: var(--rw-dropdown-border, none);
@@ -47,17 +47,19 @@ class RWDropdown extends RowiElement {
       ['slot', {name: 'holder', attrs: {name: 'holder'}}],
       ['rw-overlay', {
         name: 'dropdown',
-        // props: {
-        //   opacity: this.props.opacity.default,
-        //   color: this.props.overlayColor.default,
-        //   transition: this.props.transitionTime.default
-        // },
-        // on: {
-        //   $opened: ev => {
-        //     this._avoidUpdateOverlay = true
-        //     this.opened = ev.detail.newValue
-        //   }
-        // }
+        props: {
+          opacity: this.props.opacity.default,
+          color: this.props.overlayColor.default,
+          transition: this.props.transitionTime.default
+        },
+        on: {
+          $opened: ev => {
+            if (!ev.detail.newValue) {
+              this.#close(true)
+              this.$set('opened', false)
+            }
+          }
+        }
       },
         ['div', {name: 'box', class: 'dropdown'},
           ['div', {name: 'arrow', class: 'arrow'}],
@@ -95,11 +97,9 @@ class RWDropdown extends RowiElement {
     this._possiblePositions = this._centralPositions.concat(this._cornerPositions)
     this._positions = new Set(this._possiblePositions)
 
-    this._avoidUpdateOverlay = false
-
     return {  
       opened: { type: 'boolean', handler () {
-        this._openedChanged()
+        this.#openedChanged()
       }},
       opacity: { type: 'number', default: 0, handler ({newValue}) {
         this.$.dropdown.opacity = newValue
@@ -245,23 +245,21 @@ class RWDropdown extends RowiElement {
     }
   }
 
-  _openedChanged () {
+  #openedChanged () {
     if (this.opened) {
       window.addEventListener('resize', this.#windowResized)
       this._updateAll()
-      if (!this._avoidUpdateOverlay) {
-        this.$.dropdown.opened = true
-        this._avoidUpdateOverlay = false
-      }
+      this.$.dropdown.opened = true
       setTimeout(() => this.$.box.classList.add('opened'))
     } else {
-      window.removeEventListener('resize', this.#windowResized)
-      if (!this._avoidUpdateOverlay) {
-        this.$.dropdown.opened = false
-        this._avoidUpdateOverlay = false
-      }
-      setTimeout(() => this.$.box.classList.remove('opened'))
+      this.#close()
     }
+  }
+
+  #close(preventEvent=false) {
+    window.removeEventListener('resize', this.#windowResized)
+    this.$.dropdown.$set('opened', false, preventEvent)
+    setTimeout(() => this.$.box.classList.remove('opened'))
   }
 
   #_windowResized () {
