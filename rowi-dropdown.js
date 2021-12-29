@@ -1,6 +1,4 @@
 import RowiElement from '@rowi/rowi-element'
-import '@rowi/rowi-overlay'
-
 
 function getBoxInfo(maxWidth, maxHeight, style) {
   style.maxWidth = maxWidth
@@ -8,74 +6,65 @@ function getBoxInfo(maxWidth, maxHeight, style) {
   return style
 }
 
-class RWDropdown extends RowiElement {
-  #connected
+const rowiDropdownStyle = /*css*/`
+  :host {
+    display: block;
+    position: fixed;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    z-index: 2147483647;
+  }
+
+  .dropdown {
+    background-color: var(--rw-dropdown-color, white);
+    border-radius: var(--rw-dropdown-radius, 2px);
+    position: absolute;
+    filter: var(--rw-dropdown-filter, drop-shadow(2px 2px 4px rgba(0,0,0,0.35)));
+    border: var(--rw-dropdown-border, none);
+    opacity: 0;
+    transform: scale(0);
+  }
+
+  .dropdown.opened {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  .arrow {
+    border: 1px solid var(--rw-dropdown-color, white);
+    position: absolute;
+    width: 0;
+    height: 0;
+  }
+`
+
+class RowiDropdown extends RowiElement {
   #windowResized
   constructor () {
     super()
-    this.#connected = false
 
-    const defaultTransition = this.props.transitionTime.default
-
-    const style = `
-      .dropdown {
-        background-color: var(--rw-dropdown-color, white);
-        border-radius: var(--rw-dropdown-radius, 2px);
-        position: absolute;
-        filter: var(--rw-dropdown-filter, drop-shadow(2px 2px 4px rgba(0, 0, 0, 0.35)));
-        border: var(--rw-dropdown-border, none);
-        opacity: 0;
-        transform: scale(0);
-        transition: opacity ${defaultTransition}ms, transform ${defaultTransition}ms;
-      }
-
-      .dropdown.opened {
-        opacity: 1;
-        transform: scale(1);
-        transition: opacity ${defaultTransition}ms, transform ${defaultTransition}ms;
-      } 
-
-      .arrow {
-        border: 1px solid var(--rw-dropdown-color, white);
-        position: absolute;
-        width: 0;
-        height: 0;
-      }`
+    this._opened = false
+    this._overlayReady = false
+    this._overlayClicked = this._overlayClicked.bind(this)
+    this._intangibleChanged = this._intangibleChanged.bind(this)
+    this._transitionTimeChanged = this._transitionTimeChanged.bind(this)
 
     this.$buildShadow([
-      ['style', {props: {textContent: style}}],
-      ['slot', {name: 'holder', attrs: {name: 'holder'}}],
-      ['rw-overlay', {
-        name: 'dropdown',
-        props: {
-          opacity: this.props.opacity.default,
-          color: this.props.overlayColor.default,
-          transition: this.props.transitionTime.default
-        },
-        on: {
-          $opened: ev => {
-            if (!ev.detail.newValue) {
-              this.#close(true)
-              this.$set('opened', false)
-            }
-          }
-        }
+      ['style', rowiDropdownStyle],
+      ['div', {
+        name: 'box', class: 'dropdown', attrs: {style: 'pointer-events: auto'}
       },
-        ['div', {name: 'box', class: 'dropdown'},
-          ['div', {name: 'arrow', class: 'arrow'}],
-          ['slot', {attrs: {name: 'dropdown'}}]
-        ]
+        ['div', {name: 'arrow', class: 'arrow'}],
+        ['slot']
       ]
     ])
 
     this.#windowResized = this.#_windowResized.bind(this)
   }
 
-  connectedCallback () { this.#connected = true }
-  disconnectedCallback () { this.#connected = false }
-
   static get observedAttributes () { return [
-    'data-opened',
     'data-opacity',
     'data-overlay-color',
     'data-transition-time',
@@ -96,26 +85,24 @@ class RWDropdown extends RowiElement {
     ]
     this._possiblePositions = this._centralPositions.concat(this._cornerPositions)
     this._positions = new Set(this._possiblePositions)
+    this._holder = null
 
-    return {  
-      opened: { type: 'boolean', handler () {
-        this.#openedChanged()
-      }},
-      opacity: { type: 'number', default: 0, handler ({newValue}) {
-        this.$.dropdown.opacity = newValue
-      }},
-      overlayColor: { type: 'string', default: '0,0,0', handler ({newValue}) {
-        this.$.dropdown.color = newValue
-      }},
-      transitionTime: { type: 'number', default: 300, handler ({newValue}) {
-        this.$.dropdown.transition = newValue
-      }},
-      persistent: { type: 'boolean', handler ({newValue}) {
-        this.$.dropdown.persistent = newValue
-      }},
-      intangible: { type: 'boolean', handler ({newValue}) {
-        this.$.dropdown.intangible = newValue
-      }},
+    return {
+      opacity: { type: 'number', default: 0 },
+      overlayColor: { type: 'string', default: '0,0,0' },
+      transitionTime: {
+        type: 'number', default: 300,
+        handler ({}) {
+          this._transitionTimeChanged()
+        }
+      },
+      persistent: { type: 'boolean' },
+      intangible: {
+        type: 'boolean',
+        handler ({}) {
+          this._intangibleChanged()
+        }
+      },
       dropdownStyle: { type: 'string', default: 'normal',
         validator (value) {
           return this._possibleDropdowns.includes(value)
@@ -139,33 +126,82 @@ class RWDropdown extends RowiElement {
             this._positions = new Set(newValue.trim().split(/ +/))
           }
         }
-      }
+      },
+      querySelector: {
+        type: 'string',
+        handler ({}) {
+          this._holder = document.querySelector(this.querySelector)
+        }
+      },
     }
   }
 
-  _compareBoxes (boxes, positions) {
-    for (const position of positions) {
-      if (! boxes.hasOwnProperty(position)) continue
-      const style = boxes[position]
-      if (style.maxWidth * style.maxHeight > this._largestSize) {
-        this._largestBoxPosition = position
-        this._largestBoxStyle = style
-      }
+  connectedCallback () {
+    super.connectedCallback()
+    this._opened = true
+    if (!this._overlayReady) {
+      this._overlayReady = true
+      this._intangibleChanged()
+      this._transitionTimeChanged()
     }
-  }  
+  }
+
+  disconnectedCallback () { this._opened = false }
+
+  _overlayClicked (event) {
+    if (event.target === this || !this.contains(event.target)) {
+      this.close()
+      event.stopPropagation()
+    }
+  }
+
+  _intangibleChanged () {
+    this.style.pointerEvents = this.intangible ? 'none' : 'auto'
+  }
+
+  _transitionTimeChanged () {
+    this.style.transition = `background-color ${this.transitionTime}ms`
+    let val = `opacity ${this.transitionTime}ms, transform ${this.transitionTime}ms`
+    this.$.dropdown.style.transition = val
+  }
+
+  open() {
+    if (this._opened) return
+    if (!this.persistent) {
+      document.addEventListener('click', this._overlayClicked)
+    }
+    window.addEventListener('resize', this.#windowResized)
+    this._updateAll()
+    document.body.append(this)
+    setTimeout(() => {
+      this.style.backgroundColor = `rgba(${this.color}, ${this.opacity})`
+      this.$.dropdown.classList.add('opened')
+    })
+  }
+
+  close() {
+    if (!this._opened) return
+    if (!this.persistent) {
+      document.removeEventListener('click', this._overlayClicked)
+    }
+    window.removeEventListener('resize', this.#windowResized)
+    this.$.dropdown.classList.remove('opened')
+    this.style.backgroundColor = `rgba(${this.color}, 0)`
+    setTimeout(() => this.remove(), this.transitionTime)
+  }
 
   _findLargestBox (rect) {
     const _window = document.documentElement
     const windowHeight = _window.clientHeight
     const windowWidth = _window.clientWidth
-  
+
     const rightWidth = windowWidth - rect.right
     const bottomHeight = windowHeight - rect.bottom
     const invertedLeft = windowWidth - rect.x
     const invertedBottom = windowHeight - rect.y
 
     this._largestSize = -Infinity
-  
+
     if (this.dropdownStyle === 'normal') {
       const boxes = {
         top_left: getBoxInfo(
@@ -201,18 +237,20 @@ class RWDropdown extends RowiElement {
         }
       }
     } else {
-      const centerVerticalStyle = {transform: 'translateX(-50%)', left: rect.x}
-      const centerHorizStyle = {transform: 'translateY(-50%)', top: rect.y}
-      const fitVerticalStyle = {left: rect.x, width: rect.width}
-      const fitHorizStyle = {top: rect.y, height: rect.height}
-      const boxes = {
-        center: {
+      let boxes
+      if (this.dropdownStyle === 'center') {
+        const centerVerticalStyle = {transform: 'translateX(-50%)', left: rect.x}
+        const centerHorizStyle = {transform: 'translateY(-50%)', top: rect.y}
+        boxes = {
           top: getBoxInfo(windowWidth , rect.y, centerVerticalStyle),
           left: getBoxInfo(rect.x , windowHeight, centerHorizStyle),
           right: getBoxInfo(rightWidth , windowHeight, centerHorizStyle),
           bottom: getBoxInfo(windowWidth , bottomHeight, centerVerticalStyle),
-        },
-        fit: {
+        }
+      } else if (this.dropdownStyle === 'fit') {
+        const fitVerticalStyle = {left: rect.x, width: rect.width}
+        const fitHorizStyle = {top: rect.y, height: rect.height}
+        boxes = {
           top: getBoxInfo(
             rect.width , rect.y, {bottom: rect.y, ...fitVerticalStyle}
           ),
@@ -225,8 +263,9 @@ class RWDropdown extends RowiElement {
           bottom: getBoxInfo(
             rect.width , bottomHeight, {top: rect.bottom, ...fitVerticalStyle}
           ),
-        },
-        corner: {
+        }
+      } else if (this.dropdownStyle === 'corner') {
+        boxes = {
           top_left: getBoxInfo(
             rect.x , rect.y, {right: rect.x, bottom: rect.y}
           ),
@@ -241,25 +280,20 @@ class RWDropdown extends RowiElement {
           ),
         }
       }
-      this._compareBoxes(boxes[this.dropdownStyle], this._positions)
+      this._compareBoxes(boxes, this._positions)
     }
   }
 
-  #openedChanged () {
-    if (this.opened) {
-      window.addEventListener('resize', this.#windowResized)
-      this._updateAll()
-      this.$.dropdown.opened = true
-      setTimeout(() => this.$.box.classList.add('opened'))
-    } else {
-      this.#close()
+  _compareBoxes (boxes, positions) {
+    for (const position of positions) {
+      if (! boxes.hasOwnProperty(position)) continue
+      const style = boxes[position]
+      if (style.maxWidth * style.maxHeight > this._largestSize) {
+        this._largestSize = style.maxWidth * style.maxHeight
+        this._largestBoxPosition = position
+        this._largestBoxStyle = style
+      }
     }
-  }
-
-  #close(preventEvent=false) {
-    window.removeEventListener('resize', this.#windowResized)
-    this.$.dropdown.$set('opened', false, preventEvent)
-    setTimeout(() => this.$.box.classList.remove('opened'))
   }
 
   #_windowResized () {
@@ -267,53 +301,37 @@ class RWDropdown extends RowiElement {
     this._windowResizedTimeoutID = setTimeout(() => this._updateAll(), 200)
   }
 
+  _updateAll () {
+    if (this._holder === null) return
+
+    const holderRect = this._holder.getBoundingClientRect()
+    this._findLargestBox(holderRect)
+    this._applyBoxStyle(this._largestBoxStyle)
+    
+    if (this.dropdownStyle === 'center'){
+      this._adjustCenterBox(holderRect)
+    }
+  }
+  
   _applyBoxStyle (style) {
     Object.entries(style).forEach(([prop, value]) => {
       if (this._numericProps.includes(prop)) value += 'px'
-      this.$.box.style[prop] = value
+      this.$.dropdown.style[prop] = value
     })
   }
 
-  _updateAll () {
-    const holder = this.$.holder
-    const holderRect = holder.getBoundingClientRect()
-    this._findLargestBox(holderRect)
-    this._applyBoxStyle(this._largestBoxStyle)
-    this._updateDropdown(holderRect)
-  }
-
-  _centerBoxHelper1 (boxSize, midPoint, windowSize, style, sides) {
-    if (midPoint < windowSize / 2) {
-      this._centerBoxHelper2(boxSize, midPoint, style, sides[0])
-    } else {
-      this._centerBoxHelper2(boxSize, windowSize - midPoint, style, sides[1])
-    }
-  }
-
-  _centerBoxHelper2 (boxSize, halfSize, style, side) {
-    if (boxSize/2 < halfSize) {
-      this._applyBoxStyle(this._largestBoxStyle)
-    } else {
-      style[side] = 0
-      this._applyBoxStyle(style)
-    }
-  }
-  _updateDropdown (rect) {
-    if (this.dropdownStyle !== 'center') return
-
-    const box = this.$.box
-    const dropdown = this.$.dropdown
+  _adjustCenterBox (rect) {
     const opened = dropdown.opened
 
     if (!opened) {
-      box.style.visibility = 'hidden'
-      body.append(box)
+      this.style.visibility = 'hidden'
+      document.body.append(this)
     }
-    const width = box.clientWidth
-    const height = box.clientHeight
+    const width = this.$.dropdown.clientWidth
+    const height = this.$.dropdown.clientHeight
     if (!opened) {
-      dropdown.append(box)
-      box.style.visibility = 'visible'
+      this.$.dropdown.remove()
+      this.style.visibility = 'visible'
     }
 
     const style = Object.assign({}, this._largestBoxStyle)
@@ -322,16 +340,33 @@ class RWDropdown extends RowiElement {
     const _window = document.documentElement
     if (['bottom', 'top'].includes(this._largestBoxPosition)) {
       const midPoint = rect.x + rect.width / 2
-      this._centerBoxHelper1(
+      this._adjustCenterBoxHelper1(
         width, midPoint, _window.clientWidth, style, ['left', 'right']
       )
     } else {
       const midPoint = rect.y + rect.height / 2
-      this._centerBoxHelper1(
+      this._adjustCenterBoxHelper1(
         height, midPoint, _window.clientHeight, style, ['top', 'bottom']
       )
     }
   }
+
+  _adjustCenterBoxHelper1 (boxSize, midPoint, windowSize, style, sides) {
+    if (midPoint < windowSize / 2) {
+      this._adjustCenterBoxHelper2(boxSize, midPoint, style, sides[0])
+    } else {
+      this._adjustCenterBoxHelper2(boxSize, windowSize - midPoint, style, sides[1])
+    }
+  }
+
+  _adjustCenterBoxHelper2 (boxSize, halfSize, style, side) {
+    if (boxSize/2 < halfSize) {
+      this._applyBoxStyle(this._largestBoxStyle)
+    } else {
+      style[side] = 0
+      this._applyBoxStyle(style)
+    }
+  }
 }
 
-customElements.define("rw-dropdown", RWDropdown)
+customElements.define("rw-dropdown", RowiDropdown)
