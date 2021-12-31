@@ -5,14 +5,42 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document</title>
+    <style>
+        button {
+            position: fixed;
+            left: 40vw;
+            top: 45vh
+        }
+    </style>
     <script src="rowi-dropdown.min.js"></script>
+    <script>
+        let dropdown
+        window.addEventListener('load', () => {
+
+            dropdown = document.createElement('rw-dropdown')
+            // dropdown.dropdownStyle = 'normal'
+            dropdown.dropdownStyle = 'center'
+            // dropdown.dropdownStyle = 'fit'
+            // dropdown.dropdownStyle = 'corner'
+            dropdown.querySelector = '#holder'
+            dropdown.append(document.getElementById('dropdown').content.cloneNode(true))
+
+            const btn = document.getElementById('holder')
+            btn.addEventListener('click', ev => {
+                toggle()
+                // ev.stopPropagation()
+            })
+        })
+
+        function toggle() {
+            dropdown.toggle()
+        }
+    </script>
 </head>
 <body>
-    <div>word1</div>
-    <rw-dropdown>
-        <div slot="holder">hola</div>
-        <div slot="dropdown">chao</div>        
-    </rw-dropdown>
-    <div>word2</div>
+    <template id="dropdown">
+        <div contenteditable>hello world!</div>
+    </template>
+    <button id="holder">click me!</button>
 </body>
 </html>
