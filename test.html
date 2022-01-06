@@ -16,13 +16,13 @@
     <script>
         let dropdown
         window.addEventListener('load', () => {
-
             dropdown = document.createElement('rw-dropdown')
-            // dropdown.dropdownStyle = 'normal'
-            dropdown.dropdownStyle = 'center'
+            dropdown.dropdownStyle = 'normal'
+            // dropdown.dropdownStyle = 'center'
             // dropdown.dropdownStyle = 'fit'
             // dropdown.dropdownStyle = 'corner'
             dropdown.querySelector = '#holder'
+            dropdown.style.setProperty('--rw-dropdown-overlay-color', 'rgba(1,1,1,0.4)')
             dropdown.append(document.getElementById('dropdown').content.cloneNode(true))
 
             const btn = document.getElementById('holder')
