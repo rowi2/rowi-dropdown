@@ -30,21 +30,44 @@ const rowiDropdownStyle = /*css*/`
     background-color: var(--rw-dropdown-color, white);
     border-radius: var(--rw-dropdown-radius, 2px);
     position: absolute;
-    filter: var(--rw-dropdown-filter, drop-shadow(2px 2px 4px rgba(0,0,0,0.35)));
+    filter: var(--rw-dropdown-filter,
+      drop-shadow(0px 0px 4px rgba(0,0,0,0.35))
+      drop-shadow(2px 2px 1px rgba(0,0,0,0.2))
+    );
     border: var(--rw-dropdown-border, none);
-    transform: scale(0);
     overflow: auto;
-  }
-
-  .dropdown.opened {
-    transform: scale(1);
+    box-sizing: content-box;
   }
 
   .arrow {
-    border: 1px solid var(--rw-dropdown-color, white);
     position: absolute;
     width: 0;
     height: 0;
+    border: calc(var(--rw-dropdown-arrow-width, 0) * 1px) solid #0000;
+  }
+
+  .arrow-bottom {
+    top: calc(var(--rw-dropdown-arrow-height, 0) * -1px);
+    border-bottom: calc(var(--rw-dropdown-arrow-height, 0) * 1px) solid var(--rw-dropdown-color, white);
+    border-top: none;
+  }
+  
+  .arrow-top {
+    bottom: calc(var(--rw-dropdown-arrow-height, 0) * -1px);
+    border-top: calc(var(--rw-dropdown-arrow-height, 0) * 1px) solid var(--rw-dropdown-color, white);
+    border-bottom: none;
+  }
+
+  .arrow-right {
+    left: calc(var(--rw-dropdown-arrow-height, 0) * -1px);
+    border-right: calc(var(--rw-dropdown-arrow-height, 0) * 1px) solid var(--rw-dropdown-color, white);
+    border-left: none;
+  }
+  
+  .arrow-left {
+    right: calc(var(--rw-dropdown-arrow-height, 0) * -1px);
+    border-left: calc(var(--rw-dropdown-arrow-height, 0) * 1px) solid var(--rw-dropdown-color, white);
+    border-right: none;
   }
 `
 
@@ -65,7 +88,9 @@ class RowiDropdown extends RowiElement {
       [{name: 'back', class: 'back'}],
       [{name: 'dropdown', class: 'dropdown'},
         [{name: 'arrow', class: 'arrow'}],
-        ['slot']
+        [{attrs: {style: 'overflow: auto;'}},
+          ['slot']
+        ]
       ]
     ])
 
@@ -127,6 +152,9 @@ class RowiDropdown extends RowiElement {
           this._holder = document.querySelector(newValue)
         }
       },
+      arrowSize: {
+        type: 'string'
+      }
     }
   }
 
@@ -152,18 +180,16 @@ class RowiDropdown extends RowiElement {
       this._updateAll()
 
       this.style.transition = `opacity ${this.transitionTime}ms`
-      this.$.dropdown.style.transition = `transform ${this.transitionTime}ms`
+      // this.$.dropdown.style.transition = `transform ${this.transitionTime}ms`
 
       this.classList.add('opened')
-      this.$.dropdown.classList.add('opened')
+      // this.$.dropdown.classList.add('opened')
       if (!this.persistent) {
         document.addEventListener('click', this.#overlayClicked)
       }
       window.addEventListener('resize', this.#debouncedUpdate)
       this._holderRectCheck = setInterval(() => this.#checkHolderRectChanges(), 200)
-      if (this.dropdownStyle === 'center') {
-        this._dropdownRectCheck = setInterval(() => this.#checkDropdownRectChanges(), 200)
-      }
+      this._dropdownRectCheck = setInterval(() => this.#checkDropdownRectChanges(), 200)
     })
   }
 
@@ -176,7 +202,7 @@ class RowiDropdown extends RowiElement {
     clearInterval(this._dropdownRectCheck)
 
     window.removeEventListener('resize', this.#debouncedUpdate)
-    this.$.dropdown.classList.remove('opened')
+    // this.$.dropdown.classList.remove('opened')
     this.classList.remove('opened')
     setTimeout(() => this.remove(), this.transitionTime)
   }
@@ -191,33 +217,49 @@ class RowiDropdown extends RowiElement {
     const invertedLeft = windowWidth - rect.x
     const invertedTop = windowHeight - rect.y
 
+    const arrowSize = +getComputedStyle(this).getPropertyValue('--rw-dropdown-arrow-height')
+    const arrowWidth = +getComputedStyle(this).getPropertyValue('--rw-dropdown-arrow-width')
+    const leftSize = rect.x - arrowSize
+    const topSize = rect.y - arrowSize
+    const rightSize = rightWidth - arrowSize
+    const bottomSize = bottomHeight - arrowSize
+    const rInvertedTop = invertedTop + arrowSize
+    const rInvertedLeft = invertedLeft + arrowSize
+    const rRight = rect.right + arrowSize
+    const rBottom = rect.bottom + arrowSize
+
+    this._arrowPositions = {
+      x: rect.x + rect.width/2 - arrowWidth,
+      y: rect.y + rect.height/2 - arrowWidth
+    }
+
     this._largestSize = -Infinity
 
     if (this.dropdownStyle === 'normal') {
       const boxes = {
         top_left: getBoxInfo(
-          rect.right, rect.y, {right: rightWidth, bottom: invertedTop}
+          rect.right, topSize, {right: rightWidth, bottom: rInvertedTop}
         ),
         top_right: getBoxInfo(
-          invertedLeft, rect.y, {left: rect.x, bottom: invertedTop}
+          invertedLeft, topSize, {left: rect.x, bottom: rInvertedTop}
         ),
         left_top: getBoxInfo(
-          rect.x, rect.bottom, {right: invertedLeft, bottom: bottomHeight}
+          leftSize, rect.bottom, {right: rInvertedLeft, bottom: bottomHeight}
         ),
         left_bottom: getBoxInfo(
-          rect.x, invertedTop, {right: invertedLeft, top: rect.y}
+          leftSize, invertedTop, {right: rInvertedLeft, top: rect.y}
         ),
         right_top: getBoxInfo(
-          rightWidth, rect.bottom, {left: rect.right, bottom: bottomHeight}
+          rightSize, rect.bottom, {left: rRight, bottom: bottomHeight}
         ),
         right_bottom: getBoxInfo(
-          rightWidth, invertedTop, {left: rect.right, top: rect.y}
+          rightSize, invertedTop, {left: rRight, top: rect.y}
         ),
         bottom_left: getBoxInfo(
-          rect.right, bottomHeight, {right: rightWidth, top: rect.bottom}
+          rect.right, bottomSize, {right: rightWidth, top: rBottom}
         ),
         bottom_right: getBoxInfo(
-          invertedLeft, bottomHeight, {left: rect.x, top: rect.bottom}
+          invertedLeft, bottomSize, {left: rect.x, top: rBottom}
         ),
       }
       for (let position of this._positions) {
@@ -238,16 +280,16 @@ class RowiDropdown extends RowiElement {
         }
         boxes = {
           top: getBoxInfo(
-            windowWidth, rect.y, {bottom: invertedTop, ...centerVerticalStyle}
+            windowWidth, topSize, {bottom: rInvertedTop, ...centerVerticalStyle}
           ),
           left: getBoxInfo(
-            rect.x, windowHeight, {right: invertedLeft, ...centerHorizStyle}
+            leftSize, windowHeight, {right: rInvertedLeft, ...centerHorizStyle}
           ),
           right: getBoxInfo(
-            rightWidth, windowHeight, {left: rect.right, ...centerHorizStyle}
+            rightSize, windowHeight, {left: rRight, ...centerHorizStyle}
           ),
           bottom: getBoxInfo(
-            windowWidth, bottomHeight, {top: rect.bottom, ...centerVerticalStyle}
+            windowWidth, bottomSize, {top: rBottom, ...centerVerticalStyle}
           ),
         }
       } else if (this.dropdownStyle === 'fit') {
@@ -255,16 +297,16 @@ class RowiDropdown extends RowiElement {
         const fitHorizStyle = {top: rect.y, height: rect.height}
         boxes = {
           top: getBoxInfo(
-            rect.width , rect.y, {bottom: invertedTop, ...fitVerticalStyle}
+            rect.width , topSize, {bottom: rInvertedTop, ...fitVerticalStyle}
           ),
           left: getBoxInfo(
-            rect.x , rect.height, {right: invertedLeft, ...fitHorizStyle}
+            leftSize , rect.height, {right: rInvertedLeft, ...fitHorizStyle}
           ),
           right: getBoxInfo(
-            rightWidth , rect.height, {left: rect.right, ...fitHorizStyle}
+            rightSize , rect.height, {left: rRight, ...fitHorizStyle}
           ),
           bottom: getBoxInfo(
-            rect.width , bottomHeight, {top: rect.bottom, ...fitVerticalStyle}
+            rect.width , bottomSize, {top: rBottom, ...fitVerticalStyle}
           ),
         }
       } else if (this.dropdownStyle === 'corner') {
@@ -327,9 +369,23 @@ class RowiDropdown extends RowiElement {
     }
   }
 
+  #setupArrow () {
+    if (this.dropdownStyle === 'corner') return
+    const position = this._largestBoxPosition.split('_')[0]
+    this.$.arrow.className = 'arrow arrow-'+position
+    this.$.arrow.style.cssText = ''
+    if (['top', 'bottom'].includes(position)) {
+      const x = this._arrowPositions.x - this.#dropdownLastRect.x
+      this.$.arrow.style.left = x + 'px'
+    } else {
+      const y = this._arrowPositions.y - this.#dropdownLastRect.y
+      this.$.arrow.style.top = y + 'px'
+    }
+  }
+
   _updateAll () {
     if (this._holder === null) return
-
+    // TODO: close when holder is out of view
     const holderRect = this._holder.getBoundingClientRect()
     this.#holderLastRect = holderRect
     this._findLargestBox(holderRect)
@@ -341,6 +397,7 @@ class RowiDropdown extends RowiElement {
     }
 
     this.#dropdownLastRect = this.$.dropdown.getBoundingClientRect()
+    this.#setupArrow()
   }
 
   _applyBoxStyle (style) {

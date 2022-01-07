@@ -6,5 +6,5 @@ module.exports = {
     filename: 'rowi-dropdown.min.js',
     path: path.resolve(__dirname),
   },
-  optimization: { minimize: false }
+  // optimization: { minimize: false }
 };
