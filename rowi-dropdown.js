@@ -31,7 +31,7 @@ const rowiDropdownStyle = /*css*/`
     border-radius: var(--rw-dropdown-radius, 2px);
     position: absolute;
     filter: var(--rw-dropdown-filter, drop-shadow(0px 1px 5px #0005));
-    overflow: auto;
+    overflow: visible;
     box-sizing: content-box;
   }
 

@@ -21,8 +21,16 @@
             dropdown.dropdownStyle = 'center'
             // dropdown.dropdownStyle = 'fit'
             // dropdown.dropdownStyle = 'corner'
+
+            dropdown.intangible = true
+            dropdown.persistent = true
             dropdown.querySelector = '#holder'
-            // dropdown.style.setProperty('--rw-dropdown-overlay-color', 'rgba(1,1,1,0.4)')
+            dropdown.style.setProperty('--rw-dropdown-overlay-color', 'rgba(1,1,1,0.4)')
+            dropdown.style.setProperty('--rw-dropdown-filter', 'drop-shadow(0px 0px 6px #0005)')
+            dropdown.style.setProperty('--rw-dropdown-color', '#ace')
+            dropdown.style.setProperty('--rw-dropdown-radius', '5px')
+            dropdown.style.setProperty('--rw-dropdown-arrow-height', '5')
+            dropdown.style.setProperty('--rw-dropdown-arrow-width', '10')
             dropdown.append(document.getElementById('dropdown').content.cloneNode(true))
 
             const btn = document.getElementById('holder')
