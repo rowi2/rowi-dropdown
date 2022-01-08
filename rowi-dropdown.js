@@ -30,11 +30,7 @@ const rowiDropdownStyle = /*css*/`
     background-color: var(--rw-dropdown-color, white);
     border-radius: var(--rw-dropdown-radius, 2px);
     position: absolute;
-    filter: var(--rw-dropdown-filter,
-      drop-shadow(0px 0px 4px rgba(0,0,0,0.35))
-      drop-shadow(2px 2px 1px rgba(0,0,0,0.2))
-    );
-    border: var(--rw-dropdown-border, none);
+    filter: var(--rw-dropdown-filter, drop-shadow(0px 1px 5px #0005));
     overflow: auto;
     box-sizing: content-box;
   }
@@ -74,12 +70,12 @@ const rowiDropdownStyle = /*css*/`
 class RowiDropdown extends RowiElement {
   #debouncedUpdate
   #overlayClicked
-  #holderLastRect = {}
-  #dropdownLastRect = {}
   constructor () {
     super()
 
     this._opened = false
+    this._holderLastRect = {}
+    this._dropdownLastRect = {}
     this.#overlayClicked = this.#_overlayClicked.bind(this)
     this.#debouncedUpdate = this.#_debouncedUpdate.bind(this)
 
@@ -114,7 +110,7 @@ class RowiDropdown extends RowiElement {
     this._cornerPositions = [
       'top_left', 'top_right', 'bottom_left', 'bottom_right'
     ]
-    this._possiblePositions = this._centralPositions.concat(this._cornerPositions)
+    this._possiblePositions = [...this._centralPositions, ...this._cornerPositions]
     this._positions = new Set(this._possiblePositions)
     this._holder = null
 
@@ -151,9 +147,6 @@ class RowiDropdown extends RowiElement {
         handler ({newValue}) {
           this._holder = document.querySelector(newValue)
         }
-      },
-      arrowSize: {
-        type: 'string'
       }
     }
   }
@@ -177,7 +170,7 @@ class RowiDropdown extends RowiElement {
 
     document.body.append(this)
     setTimeout(() => {
-      this._updateAll()
+      this.#updateAll()
 
       this.style.transition = `opacity ${this.transitionTime}ms`
       // this.$.dropdown.style.transition = `transform ${this.transitionTime}ms`
@@ -207,7 +200,7 @@ class RowiDropdown extends RowiElement {
     setTimeout(() => this.remove(), this.transitionTime)
   }
 
-  _findLargestBox (rect) {
+  #findLargestBox (rect) {
     const _window = document.documentElement
     const windowHeight = _window.clientHeight
     const windowWidth = _window.clientWidth
@@ -264,9 +257,9 @@ class RowiDropdown extends RowiElement {
       }
       for (let position of this._positions) {
         if (['top', 'bottom'].includes(position)) {
-          this._compareBoxes(boxes, [position + '_right', position + '_left'])
+          this.#compareBoxes(boxes, [position + '_right', position + '_left'])
         } else {
-          this._compareBoxes(boxes, [position + '_bottom', position + '_top'])
+          this.#compareBoxes(boxes, [position + '_bottom', position + '_top'])
         }
       }
     } else {
@@ -325,11 +318,11 @@ class RowiDropdown extends RowiElement {
           ),
         }
       }
-      this._compareBoxes(boxes, this._positions)
+      this.#compareBoxes(boxes, this._positions)
     }
   }
 
-  _compareBoxes (boxes, positions) {
+  #compareBoxes (boxes, positions) {
     for (const position of positions) {
       if (! boxes.hasOwnProperty(position)) continue
       const style = boxes[position]
@@ -343,7 +336,7 @@ class RowiDropdown extends RowiElement {
 
   #_debouncedUpdate () {
     clearTimeout(this._debouncedUpdateTimeoutID)
-    this._debouncedUpdateTimeoutID = setTimeout(() => this._updateAll(), 200)
+    this._debouncedUpdateTimeoutID = setTimeout(() => this.#updateAll(), 200)
   }
 
   #areRectsEqual (rect1, rect2) {
@@ -355,16 +348,16 @@ class RowiDropdown extends RowiElement {
 
   #checkHolderRectChanges () {
     const newHolderRect = this._holder.getBoundingClientRect()
-    if (!this.#areRectsEqual(this.#holderLastRect, newHolderRect)) {
-      this.#holderLastRect = newHolderRect
+    if (!this.#areRectsEqual(this._holderLastRect, newHolderRect)) {
+      this._holderLastRect = newHolderRect
       this.#debouncedUpdate()
     }
   }
 
   #checkDropdownRectChanges () {
     const newDropdownRect = this.$.dropdown.getBoundingClientRect()
-    if (!this.#areRectsEqual(this.#dropdownLastRect, newDropdownRect)) {
-      this.#dropdownLastRect = newDropdownRect
+    if (!this.#areRectsEqual(this._dropdownLastRect, newDropdownRect)) {
+      this._dropdownLastRect = newDropdownRect
       this.#debouncedUpdate()
     }
   }
@@ -375,32 +368,32 @@ class RowiDropdown extends RowiElement {
     this.$.arrow.className = 'arrow arrow-'+position
     this.$.arrow.style.cssText = ''
     if (['top', 'bottom'].includes(position)) {
-      const x = this._arrowPositions.x - this.#dropdownLastRect.x
+      const x = this._arrowPositions.x - this._dropdownLastRect.x
       this.$.arrow.style.left = x + 'px'
     } else {
-      const y = this._arrowPositions.y - this.#dropdownLastRect.y
+      const y = this._arrowPositions.y - this._dropdownLastRect.y
       this.$.arrow.style.top = y + 'px'
     }
   }
 
-  _updateAll () {
+  #updateAll () {
     if (this._holder === null) return
     // TODO: close when holder is out of view
     const holderRect = this._holder.getBoundingClientRect()
-    this.#holderLastRect = holderRect
-    this._findLargestBox(holderRect)
+    this._holderLastRect = holderRect
+    this.#findLargestBox(holderRect)
 
     if (this.dropdownStyle === 'center'){
-      this._adjustCenterBox(holderRect)
+      this.#adjustCenterBox(holderRect)
     } else {
-      this._applyBoxStyle(this._largestBoxStyle)
+      this.#applyBoxStyle(this._largestBoxStyle)
     }
 
-    this.#dropdownLastRect = this.$.dropdown.getBoundingClientRect()
+    this._dropdownLastRect = this.$.dropdown.getBoundingClientRect()
     this.#setupArrow()
   }
 
-  _applyBoxStyle (style) {
+  #applyBoxStyle (style) {
     this.$.dropdown.style.cssText = ''
     Object.entries(style).forEach(([prop, value]) => {
       if (this._numericProps.includes(prop)) value += 'px'
@@ -408,7 +401,7 @@ class RowiDropdown extends RowiElement {
     })
   }
 
-  _adjustCenterBox (rect) {
+  #adjustCenterBox (rect) {
     this.$.dropdown.style.cssText = ''
     this.$.dropdown.style.width = 'fit-content'
     this.$.dropdown.style.height = 'fit-content'
@@ -418,28 +411,28 @@ class RowiDropdown extends RowiElement {
     const _window = document.documentElement
     if (['bottom', 'top'].includes(this._largestBoxPosition)) {
       const midPoint = rect.x + rect.width / 2
-      this._adjustCenterBoxHelper1(
+      this.#adjustCenterBoxHelper1(
         width, midPoint, _window.clientWidth, ['left', 'right']
       )
     } else {
       const midPoint = rect.y + rect.height / 2
-      this._adjustCenterBoxHelper1(
+      this.#adjustCenterBoxHelper1(
         height, midPoint, _window.clientHeight,  ['top', 'bottom']
       )
     }
   }
 
-  _adjustCenterBoxHelper1 (boxSize, midPoint, windowSize, sides) {
+  #adjustCenterBoxHelper1 (boxSize, midPoint, windowSize, sides) {
     if (midPoint < windowSize / 2) {
-      this._adjustCenterBoxHelper2(boxSize, midPoint, sides[0], sides[1])
+      this.#adjustCenterBoxHelper2(boxSize, midPoint, sides[0], sides[1])
     } else {
-      this._adjustCenterBoxHelper2(boxSize, windowSize - midPoint, sides[1], sides[0])
+      this.#adjustCenterBoxHelper2(boxSize, windowSize - midPoint, sides[1], sides[0])
     }
   }
 
-  _adjustCenterBoxHelper2 (boxSize, halfSize, side1, side2) {
+  #adjustCenterBoxHelper2 (boxSize, halfSize, side1, side2) {
     if (boxSize/2 < halfSize) {
-      this._applyBoxStyle(this._largestBoxStyle)
+      this.#applyBoxStyle(this._largestBoxStyle)
       this.$.dropdown.style.width = 'fit-content'
       this.$.dropdown.style.height = 'fit-content'
     } else {
@@ -447,7 +440,7 @@ class RowiDropdown extends RowiElement {
       delete style.transform
       delete style[side2]
       style[side1] = 0
-      this._applyBoxStyle(style)
+      this.#applyBoxStyle(style)
     }
   }
 }
