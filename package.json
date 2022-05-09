@@ -1,8 +1,12 @@
 {
   "name": "@rowi/rowi-dropdown",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "description": "A dropdown web component",
-  "main": "rowi-dropdown.js",
+  "main": "dist/rowi-dropdown.js",
+  "types": "dist/rowi-dropdown.d.ts",
+  "files": [
+    "/dist"
+  ],
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "webpack"
